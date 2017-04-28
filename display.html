@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+
+  <title>Modified Schelling Model</title>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+  <div class="container" style="margin-top:5%">
+
+    <div class='button-container'>
+      <input id="initialize" class="btn btn-primary btn-lg" type="button" value="INITIALIZE"/>
+      <input id="start" class="btn btn-success btn-lg disabled" type="button" value="START"/>
+      <input id="stop" class="btn btn-danger btn-lg disabled" type="button" value="STOP"/>
+    </div>
+
+    <div class="grid-container"></div>
+
+  </div>
+
+</body>
+</html>
+
+<script>
+
+var SAMPLE = [];
+var WIDTH = 20;
+var HEIGHT = 20;
+var RED = .6;
+var BLUE = .3;
+var EMPTY = .1;
+
+// list of all possible locations
+var bucket = [];
+
+// select random item from bucket
+function getRandomFromBucket() {
+   var randomIndex = Math.floor(Math.random()*bucket.length);
+   return bucket.splice(randomIndex, 1)[0];
+}
+
+function initialize_matrix() {
+  SAMPLE = [];
+  for (var i = 0; i < HEIGHT; i++) {
+    var t = [];
+    for (var j = 0; j < WIDTH; j++) {
+      t.push(1)
+    }
+    SAMPLE.push(t)
+  }
+
+  bucket = [];
+  for (var i=0;i<WIDTH*HEIGHT;i++) {
+      bucket.push(i);
+  }
+
+  for (var i=1; i<=RED*WIDTH*HEIGHT; i++) {
+    var index = getRandomFromBucket();
+    x = index % WIDTH;
+    y = Math.floor(index / WIDTH);
+    SAMPLE[y][x] = 3
+  }
+
+  for (var i=1; i<=BLUE*WIDTH*HEIGHT; i++) {
+    var index = getRandomFromBucket();
+    x = index % WIDTH;
+    y = Math.floor(index / WIDTH);
+    SAMPLE[y][x] = 2
+  }
+
+}
+
+function initialize_grid(x,y) {
+
+  // build the bones of the table
+  var table = $('<table></tbody>');
+  $(table).addClass('test');
+
+  for(var r = 0; r < y; r++) {
+    var tr = $('<tr>');
+    for (var c = 0; c < x; c++)
+        $('<td></td>').appendTo(tr);
+    tr.appendTo(table);
+  };
+  table.appendTo('.grid-container')
+}
+
+function build_grid(x) {
+  for (var i = 0; i < x.length; i++) {
+    for (var j = 0; j < x[i].length; j++) {
+      var toChange = $('.test tr:eq('+i+') td:eq('+j+')');
+      if (x[i][j] == 1) {
+        $(toChange).css("background-color", "white");
+      } else if (x[i][j] == 2) {
+        $(toChange).css("background-color", "blue");
+      } else if (x[i][j] == 3) {
+        $(toChange).css("background-color", "red");
+      }
+    }
+  }
+}
+
+function percent_similar_neighbors(row, column) {
+  var self = SAMPLE[row][column];
+  var similar = 0.0;
+  var neighbors = 0.0;
+
+    if (typeof SAMPLE[row+1] != 'undefined') {
+      if (SAMPLE[row+1][column] != 1) {
+        neighbors = neighbors + 1.0
+      }
+      if (SAMPLE[row+1][column] == self) {
+        similar = similar + 1.0;
+      }
+    }
+
+    if (typeof SAMPLE[row][column+1] != 'undefined') {
+      if (SAMPLE[row][column+1] != 1) {
+        neighbors = neighbors + 1.0
+      }
+      if (SAMPLE[row][column+1] == self) {
+        similar = similar + 1.0;
+      }
+    }
+    if (typeof SAMPLE[row-1] != 'undefined') {
+      if (SAMPLE[row-1][column] != 1) {
+        neighbors = neighbors + 1.0
+      }
+      if (SAMPLE[row-1][column] == self) {
+        similar = similar + 1.0;
+      }
+    }
+    if (SAMPLE[row][column-1] != 'undefined') {
+      if (SAMPLE[row][column-1] != 1) {
+        neighbors = neighbors + 1.0
+      }
+      if (SAMPLE[row][column-1] == self) {
+        similar = similar + 1.0;
+      }
+    }
+
+  return similar / neighbors
+}
+
+function pick_new_location() {
+  var locations = [];
+  for (var i = 0; i < HEIGHT; i++) {
+    for (var j = 0; j < WIDTH; j++) {
+      if (SAMPLE[i][j] == 1) {
+        locations.push([i,j])
+      }
+    }
+  }
+  var rand = locations[Math.floor(Math.random() * locations.length)];
+  return rand
+}
+
+function iterate() {
+  var row = Math.floor(Math.random() * (HEIGHT-1 - 0 + 1)) + 0;
+  var column = Math.floor(Math.random() * (WIDTH-1 - 0 + 1)) + 0;
+  if (SAMPLE[row][column] != 1) {
+    if (percent_similar_neighbors(row,column) < 0.3) {
+      var rand = pick_new_location()
+      SAMPLE[ rand[0] ][ rand[1] ] = SAMPLE[row][column];
+      SAMPLE[row][column] = 1;
+
+      var toChange = $('.test tr:eq('+row+') td:eq('+column+')');
+      if (SAMPLE[row][column] == 1) {
+        $(toChange).css("background-color", "white");
+      } else if (SAMPLE[row][column] == 2) {
+        $(toChange).css("background-color", "blue");
+      } else if (SAMPLE[row][column] == 3) {
+        $(toChange).css("background-color", "red");
+      }
+      var toChange = $('.test tr:eq('+rand[0]+') td:eq('+rand[1]+')');
+      if (SAMPLE[rand[0]][rand[1]] == 1) {
+        $(toChange).css("background-color", "white");
+      } else if (SAMPLE[rand[0]][rand[1]] == 2) {
+        $(toChange).css("background-color", "blue");
+      } else if (SAMPLE[rand[0]][rand[1]] == 3) {
+        $(toChange).css("background-color", "red");
+      }
+    }
+  }
+}
+
+var TIMER;
+
+$( document ).ready(function() {
+  initialize_grid(WIDTH,HEIGHT);
+});
+
+$("#initialize").click(function() {
+  $('#start').removeClass('disabled');
+  initialize_matrix();
+  build_grid(SAMPLE);
+});
+
+$("#start").click(function() {
+  $('#start').addClass('disabled');
+  $('#initialize').addClass('disabled');
+  $('#stop').removeClass('disabled');
+  TIMER = setInterval(iterate, 1);
+});
+
+$("#stop").click(function() {
+  clearInterval(TIMER);
+  $('#start').removeClass('disabled');
+  $('#initialize').removeClass('disabled');
+  $('#stop').addClass('disabled');
+});
+
+
+</script>

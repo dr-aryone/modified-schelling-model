@@ -1,0 +1,13 @@
+td {
+  width: 30px;
+  height: 30px;
+}
+
+.test {
+  margin: 0 auto;
+}
+
+.button-container {
+  text-align: center;
+  margin: 20px;
+}
