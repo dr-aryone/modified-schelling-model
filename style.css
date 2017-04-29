@@ -1,6 +1,7 @@
 td {
-  width: 30px;
-  height: 30px;
+  width: 15px;
+  height: 15px;
+  border: 1px solid black;
 }
 
 .test {
@@ -8,6 +9,11 @@ td {
 }
 
 .button-container {
+  text-align: center;
+  margin: 20px;
+}
+
+.counter-container {
   text-align: center;
   margin: 20px;
 }

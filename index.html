@@ -18,12 +18,27 @@
   <div class="container" style="margin-top:5%">
 
     <div class='button-container'>
-      <input id="initialize" class="btn btn-primary btn-lg" type="button" value="INITIALIZE"/>
+      <input id="populate" class="btn btn-primary btn-lg" type="button" value="POPULATE"/>
       <input id="start" class="btn btn-success btn-lg disabled" type="button" value="START"/>
       <input id="stop" class="btn btn-danger btn-lg disabled" type="button" value="STOP"/>
+      <input id="clear" class="btn btn-warning btn-lg" type="button" value="CLEAR"/>
     </div>
 
     <div class="grid-container"></div>
+
+    <div class="counter-container">
+    <div class="row">
+      <div class="col-md-2 col-md-offset-3">
+        <h4><span class="label label-default rounds">Round: 0</span></h4>
+      </div>
+      <div class="col-md-2">
+        <h4><span class="label label-default moves">Moves: 0</span></h4>
+      </div>
+      <div class="col-md-2">
+        <h4><span class="label label-default sat">Satisfied: 0%</span></h4>
+      </div>
+    </div>
+  </div>
 
   </div>
 
@@ -32,22 +47,39 @@
 
 <script>
 
+// instantiate the neighborhood matrix
 var SAMPLE = [];
-var WIDTH = 20;
-var HEIGHT = 20;
-var RED = .6;
-var BLUE = .3;
-var EMPTY = .1;
 
-// list of all possible locations
-var bucket = [];
+// instantiate the width and height of the neighborhood
+var WIDTH = 30;
+var HEIGHT = 30;
 
-// select random item from bucket
-function getRandomFromBucket() {
-   var randomIndex = Math.floor(Math.random()*bucket.length);
-   return bucket.splice(randomIndex, 1)[0];
+// instantiate the percent of red, blue, empty
+var RED = .4;
+var BLUE = .4;
+var EMPTY = 1 - RED - BLUE;
+var TOTAL = RED*WIDTH*HEIGHT + BLUE*WIDTH*HEIGHT;
+
+// instantiate a variable for percent similar of neighbors
+var PSIM = 0.5
+
+// instantiate a list of all possible locations
+var BUCKET = [];
+
+// instantiate a timer for iteration speed
+var TIMER;
+
+// instantiate round counter
+var ROUND = 0;
+var MOVES = 0;
+
+// select random item from BUCKET for use when selecting new location
+function getRandomFromBUCKET() {
+   var randomIndex = Math.floor(Math.random()*BUCKET.length);
+   return BUCKET.splice(randomIndex, 1)[0];
 }
 
+// build an empty matrix for the neighborhood
 function initialize_matrix() {
   SAMPLE = [];
   for (var i = 0; i < HEIGHT; i++) {
@@ -57,21 +89,42 @@ function initialize_matrix() {
     }
     SAMPLE.push(t)
   }
+}
 
-  bucket = [];
+// build a bucket with all locations as integers
+function initialize_bucket() {
+  BUCKET = [];
   for (var i=0;i<WIDTH*HEIGHT;i++) {
-      bucket.push(i);
+      BUCKET.push(i);
+  }
+}
+
+// clear non-infrastructure parts of SAMPLE and populate matrix
+function randomize_matrix() {
+
+  var num_inf = 0;
+  initialize_bucket();
+  for (var i = 0; i < HEIGHT; i++) {
+    for (var j = 0; j < WIDTH; j++) {
+      if (SAMPLE[i][j] == 0) {
+        var index = BUCKET.indexOf(i*HEIGHT + j)
+        BUCKET.splice(index,1);
+        num_inf = num_inf + 1;
+      } else {
+        SAMPLE[i][j] = 1
+      }
+    }
   }
 
-  for (var i=1; i<=RED*WIDTH*HEIGHT; i++) {
-    var index = getRandomFromBucket();
+  for (var i=1; i<=RED*(WIDTH*HEIGHT - num_inf); i++) {
+    var index = getRandomFromBUCKET();
     x = index % WIDTH;
     y = Math.floor(index / WIDTH);
     SAMPLE[y][x] = 3
   }
 
-  for (var i=1; i<=BLUE*WIDTH*HEIGHT; i++) {
-    var index = getRandomFromBucket();
+  for (var i=1; i<=BLUE*(WIDTH*HEIGHT - num_inf); i++) {
+    var index = getRandomFromBUCKET();
     x = index % WIDTH;
     y = Math.floor(index / WIDTH);
     SAMPLE[y][x] = 2
@@ -79,6 +132,7 @@ function initialize_matrix() {
 
 }
 
+// build the html needed to produce the table with matrix of x by y units
 function initialize_grid(x,y) {
 
   // build the bones of the table
@@ -94,11 +148,14 @@ function initialize_grid(x,y) {
   table.appendTo('.grid-container')
 }
 
+// change the coloring of the grid to reflect the new model
 function build_grid(x) {
   for (var i = 0; i < x.length; i++) {
     for (var j = 0; j < x[i].length; j++) {
       var toChange = $('.test tr:eq('+i+') td:eq('+j+')');
-      if (x[i][j] == 1) {
+      if (x[i][j] == 0) {
+        $(toChange).css("background-color", "black");
+      } else if (x[i][j] == 1) {
         $(toChange).css("background-color", "white");
       } else if (x[i][j] == 2) {
         $(toChange).css("background-color", "blue");
@@ -109,6 +166,7 @@ function build_grid(x) {
   }
 }
 
+// calculate the percent of neighbors that are similar
 function percent_similar_neighbors(row, column) {
   var self = SAMPLE[row][column];
   var similar = 0.0;
@@ -151,6 +209,7 @@ function percent_similar_neighbors(row, column) {
   return similar / neighbors
 }
 
+// find a new location if the agent decides to move
 function pick_new_location() {
   var locations = [];
   for (var i = 0; i < HEIGHT; i++) {
@@ -164,11 +223,16 @@ function pick_new_location() {
   return rand
 }
 
+// move one agent at a time and update the matrix and display accordingly
 function iterate() {
+  ROUND = ROUND + 1;
+  $('.rounds').text('Rounds: ' + ROUND);
   var row = Math.floor(Math.random() * (HEIGHT-1 - 0 + 1)) + 0;
   var column = Math.floor(Math.random() * (WIDTH-1 - 0 + 1)) + 0;
-  if (SAMPLE[row][column] != 1) {
-    if (percent_similar_neighbors(row,column) < 0.3) {
+  if (SAMPLE[row][column] != 1 && SAMPLE[row][column] != 0) {
+    if (percent_similar_neighbors(row,column) < PSIM) {
+      MOVES = MOVES + 1;
+      $('.moves').text('Moves: ' + MOVES);
       var rand = pick_new_location()
       SAMPLE[ rand[0] ][ rand[1] ] = SAMPLE[row][column];
       SAMPLE[row][column] = 1;
@@ -193,31 +257,97 @@ function iterate() {
   }
 }
 
-var TIMER;
+function iterate_all() {
+  ROUND = ROUND + 1;
+  $('.rounds').text('Rounds: ' + ROUND);
+  var sat = 0;
+  for (row=0; row < HEIGHT; row++) {
+    for (column=0; column < WIDTH; column++) {
+      if (SAMPLE[row][column] != 1 && SAMPLE[row][column] != 0) {
+        if (percent_similar_neighbors(row,column) < PSIM) {
+          MOVES = MOVES + 1;
+          $('.moves').text('Moves: ' + MOVES);
+          var rand = pick_new_location();
+          SAMPLE[ rand[0] ][ rand[1] ] = SAMPLE[row][column];
+          SAMPLE[row][column] = 1;
 
+          var toChange = $('.test tr:eq('+row+') td:eq('+column+')');
+          if (SAMPLE[row][column] == 1) {
+            $(toChange).css("background-color", "white");
+          } else if (SAMPLE[row][column] == 2) {
+            $(toChange).css("background-color", "blue");
+          } else if (SAMPLE[row][column] == 3) {
+            $(toChange).css("background-color", "red");
+          }
+          var toChange = $('.test tr:eq('+rand[0]+') td:eq('+rand[1]+')');
+          if (SAMPLE[rand[0]][rand[1]] == 1) {
+            $(toChange).css("background-color", "white");
+          } else if (SAMPLE[rand[0]][rand[1]] == 2) {
+            $(toChange).css("background-color", "blue");
+          } else if (SAMPLE[rand[0]][rand[1]] == 3) {
+            $(toChange).css("background-color", "red");
+          }
+        }
+      }
+    }
+  }
+}
+
+// when document loads, build the html
 $( document ).ready(function() {
   initialize_grid(WIDTH,HEIGHT);
-});
-
-$("#initialize").click(function() {
-  $('#start').removeClass('disabled');
   initialize_matrix();
   build_grid(SAMPLE);
 });
 
-$("#start").click(function() {
-  $('#start').addClass('disabled');
-  $('#initialize').addClass('disabled');
-  $('#stop').removeClass('disabled');
-  TIMER = setInterval(iterate, 1);
+// when initalize is clicked, initialize the matrix and display it
+$("#populate").click(function() {
+  $('#start').removeClass('disabled');
+  randomize_matrix();
+  build_grid(SAMPLE);
+  ROUND = 0;
+  MOVES = 0;
+  $('.rounds').text('Rounds: ' + ROUND);
+  $('.moves').text('Moves: ' + MOVES);
 });
 
+// when start is clicked, begin iterations
+$("#start").click(function() {
+  $('#start').addClass('disabled');
+  $('#populate').addClass('disabled');
+  $('#stop').removeClass('disabled');
+  TIMER = setInterval(iterate, 10);
+});
+
+// when stop is clicked, stop iterations
 $("#stop").click(function() {
   clearInterval(TIMER);
   $('#start').removeClass('disabled');
-  $('#initialize').removeClass('disabled');
+  $('#populate').removeClass('disabled');
   $('#stop').addClass('disabled');
 });
 
+$("#clear").click(function() {
+  clearInterval(TIMER);
+  initialize_matrix();
+  build_grid(SAMPLE);
+  $('#start').addClass('disabled');
+  $('#populate').removeClass('disabled');
+  $('#stop').addClass('disabled');
+});
+
+
+$('.grid-container').on('click', 'td', function() {
+  var col = $(this).parent().children().index($(this));
+  var row = $(this).parent().parent().children().index($(this).parent());
+  var toChange = $('.test tr:eq('+row+') td:eq('+col+')');
+  if (SAMPLE[row][col] == 0) {
+    SAMPLE[row][col] = 1
+    $(toChange).css("background-color", "white");
+  } else {
+    SAMPLE[row][col] = 0;
+    $(toChange).css("background-color", "black");
+  }
+});
 
 </script>
