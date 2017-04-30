@@ -31,3 +31,65 @@ function iterate() {
     }
   }
 }
+
+var vmargin = {top: 30, right: 20, bottom: 30, left: 50},
+    vwidth = 600 - vmargin.left - vmargin.right,
+    vheight = 270 - vmargin.top - vmargin.bottom;
+
+var x = d3.time.scale().range([0, vwidth]);
+var y = d3.scale.linear().range([vheight, 0]);
+
+// Define the axes
+var xAxis = d3.svg.axis().scale(x)
+    .orient("bottom").ticks(5);
+var yAxis = d3.svg.axis().scale(y)
+    .orient("left").ticks(5);
+// Define the line
+var valueline = d3.svg.line()
+    .x(function(d) { return x(CHART.moves); })
+    .y(function(d) { return y(CHART.sat); });
+
+// Adds the svg canvas
+var svg = d3.select("visualisation")
+    .append("svg")
+        .attr("width", vwidth + vmargin.left + vmargin.right)
+        .attr("height", vheight + vmargin.top + vmargin.bottom)
+    .append("g")
+        .attr("transform",
+              "translate(" + vmargin.left + "," + vmargin.top + ")");
+
+x.domain(d3.extent(CHART, function(d) { return CHART.moves; }));
+y.domain([0, d3.max(CHART, function(d) { return CHART.sat; })]);
+                  // Add the valueline path.
+svg.append("path")
+  .attr("class", "line")
+  .attr("d", valueline(CHART));
+                  // Add the X Axis
+svg.append("g")
+  .attr("class", "x axis")
+  .attr("transform", "translate(0," + vheight + ")")
+  .call(xAxis);
+                  // Add the Y Axis
+svg.append("g")
+  .attr("class", "y axis")
+  .call(yAxis);
+
+function updateData() {
+
+      	// Scale the range of the data again
+      	x.domain(d3.extent(CHART, function(d) { return CHART.moves; }));
+  	    y.domain([0, d3.max(CHART, function(d) { return CHART.sat; })]);
+      // Select the section we want to apply our changes to
+      var svg = d3.select("visualization").transition();
+      // Make the changes
+          svg.select(".line")   // change the line
+              .duration(750)
+              .attr("d", valueline(CHART));
+          svg.select(".x.axis") // change the x axis
+              .duration(150)
+              .call(xAxis);
+          svg.select(".y.axis") // change the y axis
+              .duration(150)
+              .call(yAxis);
+
+  }
