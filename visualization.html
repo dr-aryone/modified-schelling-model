@@ -1,0 +1,49 @@
+<html>
+
+<head>
+
+	<link rel="stylesheet" type="text/css" href="css/epoch.min.css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
+	<!-- <script src="https://cdn.jsdelivr.net/epoch/0.8.4/epoch.min.js"></script> -->
+	<script src="js/epoch.min.js"></script>
+
+</head>
+
+<body>
+
+<div id="lineChart" style="width: 800px; height: 200px"></div>
+
+</body>
+
+
+</html>
+
+<script>
+
+
+var lineChartData = [
+  // First series
+  {
+    label: "Series 1",
+    values: [ {time: 1370044800, y: 100}, {time: 1370044801, y: 1000}]
+  },
+
+  // The second series
+  {
+    label: "Series 2",
+    values: [ {time: 1370044800, y: 78}, {time: 1370044801, y: 98} ]
+  }
+
+];
+
+var myChart = $('#lineChart').epoch({
+	type: 'time.line',
+	data: lineChartData
+});
+
+myChart.push([ {time: 1370044804, y: 2000}, {time: 1370044804, y: 2000}])
+
+
+</script>

@@ -57,8 +57,10 @@ var HEIGHT = 30;
 // instantiate the percent of red, blue, empty
 var RED = .4;
 var BLUE = .4;
-var EMPTY = 1 - RED - BLUE;
-var TOTAL = RED*WIDTH*HEIGHT + BLUE*WIDTH*HEIGHT;
+var EMPTY;
+var TOTAL;
+var TOTAL_RED;
+var TOTAL_BLUE;
 
 // instantiate a variable for percent similar of neighbors
 var PSIM = 0.5
@@ -72,6 +74,13 @@ var TIMER;
 // instantiate round counter
 var ROUND = 0;
 var MOVES = 0;
+
+// infrastructure counter
+var NUM_INF;
+
+// instantiate satisfied numbers
+var RED_SAT = 0;
+var BLUE_SAT = 0;
 
 // select random item from BUCKET for use when selecting new location
 function getRandomFromBUCKET() {
@@ -102,28 +111,32 @@ function initialize_bucket() {
 // clear non-infrastructure parts of SAMPLE and populate matrix
 function randomize_matrix() {
 
-  var num_inf = 0;
+  NUM_INF = 0;
+  TOTAL_RED = 0;
+  TOTAL_BLUE = 0;
   initialize_bucket();
   for (var i = 0; i < HEIGHT; i++) {
     for (var j = 0; j < WIDTH; j++) {
       if (SAMPLE[i][j] == 0) {
         var index = BUCKET.indexOf(i*HEIGHT + j)
         BUCKET.splice(index,1);
-        num_inf = num_inf + 1;
+        NUM_INF = NUM_INF + 1;
       } else {
         SAMPLE[i][j] = 1
       }
     }
   }
 
-  for (var i=1; i<=RED*(WIDTH*HEIGHT - num_inf); i++) {
+  for (var i=1; i<=RED*(WIDTH*HEIGHT - NUM_INF); i++) {
+    TOTAL_RED = TOTAL_RED + 1;
     var index = getRandomFromBUCKET();
     x = index % WIDTH;
     y = Math.floor(index / WIDTH);
     SAMPLE[y][x] = 3
   }
 
-  for (var i=1; i<=BLUE*(WIDTH*HEIGHT - num_inf); i++) {
+  for (var i=1; i<=BLUE*(WIDTH*HEIGHT - NUM_INF); i++) {
+    TOTAL_BLUE = TOTAL_BLUE + 1;
     var index = getRandomFromBUCKET();
     x = index % WIDTH;
     y = Math.floor(index / WIDTH);
@@ -173,32 +186,34 @@ function percent_similar_neighbors(row, column) {
   var neighbors = 0.0;
 
     if (typeof SAMPLE[row+1] != 'undefined') {
-      if (SAMPLE[row+1][column] != 1) {
+      if (SAMPLE[row+1][column] != 1 && SAMPLE[row+1][column] != 0) {
         neighbors = neighbors + 1.0
       }
       if (SAMPLE[row+1][column] == self) {
         similar = similar + 1.0;
       }
-    }
+    };
 
     if (typeof SAMPLE[row][column+1] != 'undefined') {
-      if (SAMPLE[row][column+1] != 1) {
+      if (SAMPLE[row][column+1] != 1 && SAMPLE[row][column+1] != 0) {
         neighbors = neighbors + 1.0
       }
       if (SAMPLE[row][column+1] == self) {
         similar = similar + 1.0;
       }
-    }
+    };
+
     if (typeof SAMPLE[row-1] != 'undefined') {
-      if (SAMPLE[row-1][column] != 1) {
+      if (SAMPLE[row-1][column] != 1 && SAMPLE[row-1][column] != 0) {
         neighbors = neighbors + 1.0
       }
       if (SAMPLE[row-1][column] == self) {
         similar = similar + 1.0;
       }
-    }
+    };
+
     if (SAMPLE[row][column-1] != 'undefined') {
-      if (SAMPLE[row][column-1] != 1) {
+      if (SAMPLE[row][column-1] != 1 && SAMPLE[row][column-1] != 0) {
         neighbors = neighbors + 1.0
       }
       if (SAMPLE[row][column-1] == self) {
@@ -207,6 +222,25 @@ function percent_similar_neighbors(row, column) {
     }
 
   return similar / neighbors
+}
+
+// calculate the percent of the population that is satisfied
+function calculate_satisfaction() {
+  RED_SAT = 0;
+  BLUE_SAT = 0;
+  for (row=0; row < HEIGHT; row++) {
+    for (column=0; column < WIDTH; column++) {
+      if (SAMPLE[row][column] == 2) {
+        if (percent_similar_neighbors(row,column) >= PSIM) {
+          BLUE_SAT = BLUE_SAT + 1;
+        }
+      } else if (SAMPLE[row][column] == 3) {
+        if (percent_similar_neighbors(row,column) >= PSIM) {
+          RED_SAT = RED_SAT + 1;
+        }
+      }
+    }
+  }
 }
 
 // find a new location if the agent decides to move
@@ -223,44 +257,14 @@ function pick_new_location() {
   return rand
 }
 
-// move one agent at a time and update the matrix and display accordingly
-function iterate() {
-  ROUND = ROUND + 1;
-  $('.rounds').text('Rounds: ' + ROUND);
-  var row = Math.floor(Math.random() * (HEIGHT-1 - 0 + 1)) + 0;
-  var column = Math.floor(Math.random() * (WIDTH-1 - 0 + 1)) + 0;
-  if (SAMPLE[row][column] != 1 && SAMPLE[row][column] != 0) {
-    if (percent_similar_neighbors(row,column) < PSIM) {
-      MOVES = MOVES + 1;
-      $('.moves').text('Moves: ' + MOVES);
-      var rand = pick_new_location()
-      SAMPLE[ rand[0] ][ rand[1] ] = SAMPLE[row][column];
-      SAMPLE[row][column] = 1;
-
-      var toChange = $('.test tr:eq('+row+') td:eq('+column+')');
-      if (SAMPLE[row][column] == 1) {
-        $(toChange).css("background-color", "white");
-      } else if (SAMPLE[row][column] == 2) {
-        $(toChange).css("background-color", "blue");
-      } else if (SAMPLE[row][column] == 3) {
-        $(toChange).css("background-color", "red");
-      }
-      var toChange = $('.test tr:eq('+rand[0]+') td:eq('+rand[1]+')');
-      if (SAMPLE[rand[0]][rand[1]] == 1) {
-        $(toChange).css("background-color", "white");
-      } else if (SAMPLE[rand[0]][rand[1]] == 2) {
-        $(toChange).css("background-color", "blue");
-      } else if (SAMPLE[rand[0]][rand[1]] == 3) {
-        $(toChange).css("background-color", "red");
-      }
-    }
-  }
-}
-
+// function that iterates by scanning over the matrix
 function iterate_all() {
   ROUND = ROUND + 1;
   $('.rounds').text('Rounds: ' + ROUND);
-  var sat = 0;
+  calculate_satisfaction();
+  var num_sat = (RED_SAT + BLUE_SAT) / (TOTAL_RED + TOTAL_BLUE) * 100;
+  var num_sat_rounded = Number(Math.round(num_sat+'e'+1)+'e-'+1);
+  $('.sat').text('Satisfied: ' + num_sat_rounded + '%');
   for (row=0; row < HEIGHT; row++) {
     for (column=0; column < WIDTH; column++) {
       if (SAMPLE[row][column] != 1 && SAMPLE[row][column] != 0) {
@@ -316,7 +320,7 @@ $("#start").click(function() {
   $('#start').addClass('disabled');
   $('#populate').addClass('disabled');
   $('#stop').removeClass('disabled');
-  TIMER = setInterval(iterate, 10);
+  TIMER = setInterval(iterate_all, 1000);
 });
 
 // when stop is clicked, stop iterations
@@ -327,6 +331,7 @@ $("#stop").click(function() {
   $('#stop').addClass('disabled');
 });
 
+// when clear is clicked, clear the board of all input
 $("#clear").click(function() {
   clearInterval(TIMER);
   initialize_matrix();
@@ -336,7 +341,7 @@ $("#clear").click(function() {
   $('#stop').addClass('disabled');
 });
 
-
+// when a table cell is clicked, turn it into a road or empty space
 $('.grid-container').on('click', 'td', function() {
   var col = $(this).parent().children().index($(this));
   var row = $(this).parent().parent().children().index($(this).parent());
