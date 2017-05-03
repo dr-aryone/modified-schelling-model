@@ -10,7 +10,8 @@
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
   <link rel="stylesheet" href="style.css">
-  <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+  <!-- <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script> -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.8.0/d3.min.js" charset="utf-8"></script>
 
 </head>
 
@@ -41,7 +42,7 @@
     </div>
   </div>
 
-  <div class="viz"><svg id="vizualisation" width="500" height="200"></svg></div>
+  <div class="viz"><svg id="vizualisation" width="700" height="400"></svg></div>
 
   </div>
 
@@ -54,8 +55,8 @@
 var SAMPLE = [];
 
 // instantiate the width and height of the neighborhood
-var WIDTH = 10;
-var HEIGHT = 10;
+var WIDTH = 20;
+var HEIGHT = 20;
 
 // instantiate the percent of red, blue, empty
 var RED = .4;
@@ -87,6 +88,8 @@ var BLUE_SAT = 0;
 
 // instantiate variables for charts
 var CHART = [];
+var CHART_RED = [];
+var CHART_BLUE = [];
 
 // select random item from BUCKET for use when selecting new location
 function getRandomFromBUCKET() {
@@ -273,14 +276,19 @@ function iterate_all() {
       if (SAMPLE[row][column] != 1 && SAMPLE[row][column] != 0) {
         if (percent_similar_neighbors(row,column) < PSIM) {
 
+          // update visualization
           calculate_satisfaction();
           var num_sat = (RED_SAT + BLUE_SAT) / (TOTAL_RED + TOTAL_BLUE) * 100;
           var num_sat_rounded = Number(Math.round(num_sat+'e'+1)+'e-'+1);
           $('.sat').text('Satisfied: ' + num_sat_rounded + '%');
 
+          draw_charts();
+
           MOVES = MOVES + 1;
           $('.moves').text('Moves: ' + MOVES);
           CHART.push({"moves": MOVES, "sat": num_sat});
+          CHART_RED.push({"moves": MOVES, "sat": (RED_SAT / TOTAL_RED)* 100});
+          CHART_BLUE.push({"moves": MOVES, "sat": (BLUE_SAT / TOTAL_BLUE) * 100});
 
           var rand = pick_new_location();
           SAMPLE[ rand[0] ][ rand[1] ] = SAMPLE[row][column];
@@ -308,56 +316,113 @@ function iterate_all() {
   }
 }
 
-function drawCharts() {
-    var viz = d3.select("#vizualisation"),
-        VWIDTH = 500,
-        VHEIGHT = 200,
+var viz;
+function initialize_charts() {
+    viz = d3.select("#vizualisation"),
+        VWIDTH = 700,
+        VHEIGHT = 400,
         VMARGINS = {
             top: 20,
             right: 20,
             bottom: 20,
             left: 50
         },
-        xScale = d3.scale.linear().range([VMARGINS.left, VWIDTH - VMARGINS.right]).domain([0, 500]),
-        yScale = d3.scale.linear().range([VHEIGHT - VMARGINS.top, VMARGINS.bottom]).domain([0, 100]),
-        xAxis = d3.svg.axis()
-        .scale(xScale),
-        yAxis = d3.svg.axis()
-        .scale(yScale)
-        .orient("left");
+        xScale = d3.scaleLinear().range([VMARGINS.left, VWIDTH - VMARGINS.right]).domain([0, 250]),
+        yScale = d3.scaleLinear().range([VHEIGHT - VMARGINS.top, VMARGINS.bottom]).domain([0, 100]),
 
-    vis.append("svg:g")
-        .attr("class", "x axis")
-        .attr("transform", "translate(0," + (HEIGHT - MARGINS.bottom) + ")")
-        .call(xAxis);
-    vis.append("svg:g")
-        .attr("class", "y axis")
-        .attr("transform", "translate(" + (MARGINS.left) + ",0)")
-        .call(yAxis);
-    var lineGen = d3.svg.line()
+        xAxis = d3.axisBottom()
+        .scale(xScale),
+        yAxis = d3.axisLeft()
+        .scale(yScale)
+
+        viz.append("svg:g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + (VHEIGHT - VMARGINS.bottom) + ")")
+            .call(xAxis);
+        viz.append("svg:g")
+            .attr("class", "y axis")
+            .attr("transform", "translate(" + (VMARGINS.left) + ",0)")
+            .call(yAxis);
+
+        function make_x_gridlines() {
+          return d3.axisBottom(xScale)
+                    .ticks(10)
+        }
+
+        // gridlines in y axis function
+        function make_y_gridlines() {
+          return d3.axisLeft(yScale)
+                    .ticks(10)
+        }
+
+        viz.append("g")
+            .attr("class", "grid")
+            .attr("transform", "translate(0," + (VHEIGHT - VMARGINS.bottom) + ")")
+            .call(make_x_gridlines()
+            .tickSize(-VHEIGHT)
+            .tickFormat("")
+        )
+
+        // add the Y gridlines
+        viz.append("g")
+            .attr("class", "grid")
+            .attr("transform", "translate(" + (VMARGINS.left) + ",0)")
+            .call(make_y_gridlines()
+            .tickSize(-VWIDTH)
+            .tickFormat("")
+        )
+
+};
+
+function draw_charts() {
+    var lineGen = d3.line()
         .x(function(d) {
-            return xScale(d.year);
+            return xScale(d.moves);
         })
         .y(function(d) {
-            return yScale(d.sale);
+            return yScale(d.sat);
         });
-    vis.append('svg:path')
-        .attr('d', lineGen(data))
+
+    viz.selectAll(".test").remove();
+
+    viz.append('svg:path')
+        .attr('class', 'test')
+        .attr('d', lineGen(CHART))
         .attr('stroke', 'green')
         .attr('stroke-width', 2)
         .attr('fill', 'none');
-    vis.append('svg:path')
-        .attr('d', lineGen(data2))
+
+    viz.append('svg:path')
+        .attr('class', 'test')
+        .attr('d', lineGen(CHART_BLUE))
         .attr('stroke', 'blue')
         .attr('stroke-width', 2)
         .attr('fill', 'none');
+
+    viz.append('svg:path')
+        .attr('class', 'test')
+        .attr('d', lineGen(CHART_RED))
+        .attr('stroke', 'red')
+        .attr('stroke-width', 2)
+        .attr('fill', 'none');
+
+}
+
+function clearCharts() {
+  CHART = [];
+  CHART_RED = [];
+  CHART_BLUE = [];
+  viz.selectAll(".test").remove();
+  draw_charts();
 }
 
 // when document loads, build the html
 $( document ).ready(function() {
   initialize_grid(WIDTH,HEIGHT);
   initialize_matrix();
+  initialize_charts();
   build_grid(SAMPLE);
+  draw_charts();
 });
 
 // when initalize is clicked, initialize the matrix and display it
@@ -367,6 +432,16 @@ $("#populate").click(function() {
   build_grid(SAMPLE);
   ROUND = 0;
   MOVES = 0;
+
+  calculate_satisfaction();
+  clearCharts();
+  var num_sat = (RED_SAT + BLUE_SAT) / (TOTAL_RED + TOTAL_BLUE) * 100;
+  var num_sat_rounded = Number(Math.round(num_sat+'e'+1)+'e-'+1);
+  CHART.push({"moves": MOVES, "sat": num_sat});
+  CHART_RED.push({"moves": MOVES, "sat": (RED_SAT / TOTAL_RED)* 100});
+  CHART_BLUE.push({"moves": MOVES, "sat": (BLUE_SAT / TOTAL_BLUE) * 100});
+
+  $('.sat').text('Satisfied: ' + num_sat_rounded + '%');
   $('.rounds').text('Rounds: ' + ROUND);
   $('.moves').text('Moves: ' + MOVES);
 });
@@ -392,6 +467,7 @@ $("#clear").click(function() {
   clearInterval(TIMER);
   initialize_matrix();
   build_grid(SAMPLE);
+  clearCharts();
   $('#start').addClass('disabled');
   $('#populate').removeClass('disabled');
   $('#stop').addClass('disabled');
