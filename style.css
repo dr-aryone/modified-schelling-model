@@ -13,6 +13,11 @@ td {
   margin: 20px;
 }
 
+.instructions {
+  text-align: center;
+  margin: 20px;
+}
+
 .counter-container {
   text-align: center;
   margin: 20px;
