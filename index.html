@@ -55,12 +55,12 @@
 var SAMPLE = [];
 
 // instantiate the width and height of the neighborhood
-var WIDTH = 20;
-var HEIGHT = 20;
+var WIDTH = 24;
+var HEIGHT = 24;
 
 // instantiate the percent of red, blue, empty
-var RED = .4;
-var BLUE = .4;
+var RED = .45;
+var BLUE = .45;
 var EMPTY;
 var TOTAL;
 var TOTAL_RED;
@@ -221,7 +221,7 @@ function percent_similar_neighbors(row, column) {
       }
     };
 
-    if (SAMPLE[row][column-1] != 'undefined') {
+    if (typeof SAMPLE[row][column-1] != 'undefined') {
       if (SAMPLE[row][column-1] != 1 && SAMPLE[row][column-1] != 0) {
         neighbors = neighbors + 1.0
       }
@@ -229,6 +229,53 @@ function percent_similar_neighbors(row, column) {
         similar = similar + 1.0;
       }
     }
+
+    // additional four neighbors in the corners
+
+    if (typeof SAMPLE[row-1] != 'undefined') {
+      if (SAMPLE[row-1][column-1] != 'undefined') {
+        if (SAMPLE[row-1][column-1] != 1 && SAMPLE[row-1][column-1] != 0) {
+          neighbors = neighbors + 1.0
+        }
+        if (SAMPLE[row-1][column-1] == self) {
+          similar = similar + 1.0;
+        }
+      }
+    }
+
+    if (typeof SAMPLE[row-1] != 'undefined') {
+      if (SAMPLE[row-1][column+1] != 'undefined') {
+        if (SAMPLE[row-1][column+1] != 1 && SAMPLE[row-1][column+1] != 0) {
+          neighbors = neighbors + 1.0
+        }
+        if (SAMPLE[row-1][column+1] == self) {
+          similar = similar + 1.0;
+        }
+      }
+    }
+
+    if (typeof SAMPLE[row+1] != 'undefined') {
+      if (SAMPLE[row+1][column-1] != 'undefined') {
+        if (SAMPLE[row+1][column-1] != 1 && SAMPLE[row+1][column-1] != 0) {
+          neighbors = neighbors + 1.0
+        }
+        if (SAMPLE[row+1][column-1] == self) {
+          similar = similar + 1.0;
+        }
+      }
+    }
+
+    if (typeof SAMPLE[row+1] != 'undefined') {
+      if (SAMPLE[row+1][column+1] != 'undefined') {
+        if (SAMPLE[row+1][column+1] != 1 && SAMPLE[row+1][column+1] != 0) {
+          neighbors = neighbors + 1.0
+        }
+        if (SAMPLE[row+1][column+1] == self) {
+          similar = similar + 1.0;
+        }
+      }
+    }
+
 
   return similar / neighbors
 }
